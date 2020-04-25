@@ -1,5 +1,9 @@
+import 'package:btc_address_validate/btc_address_validate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import 'package:btclipboard/btc_string.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() => runApp(MyApp());
 
@@ -31,11 +35,37 @@ class MyHomePage extends StatelessWidget {
             SelectableText(
               'This is what is in the clipboard',
             ),
-            FutureBuilder(
+            FutureBuilder<ClipboardData>(
               future: Clipboard.getData('text/plain'),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
-                  return Text(snapshot.data.text);
+                  var network = btcString(snapshot.data.text);
+                  if (network == null) {
+                    return Column(
+                      children: [
+                        Text('no BTC String:'),
+                        Text(snapshot.data.text),
+                      ],
+                    );
+                  }
+                  var infix = "";
+                  if (network == Network.testnet) {
+                    infix = "testnet/";
+                  }
+                  var url = "https://blockstream.info/" +
+                      infix +
+                      "search?q=" +
+                      snapshot.data.text;
+
+                  return Column(
+                    children: [
+                      Text(snapshot.data.text),
+                      RaisedButton(
+                        onPressed: () => _launchURL(url),
+                        child: Text("Search"),
+                      ),
+                    ],
+                  );
                 } else {
                   return Text('nothing');
                 }
@@ -45,5 +75,13 @@ class MyHomePage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+_launchURL(String url) async {
+  if (await canLaunch(url)) {
+    await launch(url);
+  } else {
+    throw 'Could not launch $url';
   }
 }
